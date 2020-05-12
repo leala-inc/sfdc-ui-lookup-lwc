@@ -34,7 +34,7 @@ describe('c-lookup rendering', () => {
         // Query for rendered list items
         const listItemEls = element.shadowRoot.querySelectorAll('li');
         expect(listItemEls.length).toBe(1);
-        expect(listItemEls[0].textContent).toBe('No results.');
+        expect(listItemEls[0].textContent).toBe('検索結果がありません。');
     });
 
     it('renders label', () => {
@@ -73,10 +73,10 @@ describe('c-lookup rendering', () => {
 
         // Verify selected icon
         const selIcon = element.shadowRoot.querySelector('lightning-icon');
-        expect(selIcon.alternativeText).toBe('Selected item icon');
+        expect(selIcon.alternativeText).toBe('選択済み');
         // Verify clear selection button
         const clearSelButton = element.shadowRoot.querySelector('button');
-        expect(clearSelButton.title).toBe('Remove selected option');
+        expect(clearSelButton.title).toBe('選択を削除');
         // Verify result list is NOT rendered
         const selList = element.shadowRoot.querySelectorAll('ul.slds-listbox_inline');
         expect(selList.length).toBe(0);
