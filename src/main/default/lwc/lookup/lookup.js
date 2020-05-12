@@ -212,7 +212,7 @@ export default class Lookup extends LightningElement {
     // STYLE EXPRESSIONS
 
     get getContainerClass() {
-        let css = 'slds-combobox_container slds-has-inline-listbox ';
+        let css = 'slds-combobox_container slds-has-selection ';
         if (this.hasFocus && this.hasResults()) {
             css += 'slds-has-input-focus ';
         }
@@ -231,12 +231,12 @@ export default class Lookup extends LightningElement {
     }
 
     get getInputClass() {
-        let css = 'slds-input slds-combobox__input has-custom-height ';
+        let css = 'slds-input slds-combobox__input ';
         if (this.errors.length > 0 || (this.isDirty && this.required && !this.hasSelection())) {
             css += 'has-custom-error ';
         }
         if (!this.isMultiEntry) {
-            css += 'slds-combobox__input-value ' + (this.hasSelection() ? 'has-custom-border' : '');
+            css += this.hasSelection() ? 'slds-combobox__input-value' : '';
         }
         return css;
     }
