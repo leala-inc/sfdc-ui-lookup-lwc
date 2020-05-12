@@ -1,7 +1,7 @@
 import { LightningElement, api } from 'lwc';
 
 const MINIMAL_SEARCH_TERM_LENGTH = 2; // Min number of chars required to search
-const SEARCH_DELAY = 300; // Wait 300 ms after user stops typing then, peform search
+const SEARCH_DELAY = 300; // Wait 300 ms after user stops typing then, perform search
 
 export default class Lookup extends LightningElement {
     @api label;
@@ -72,7 +72,7 @@ export default class Lookup extends LightningElement {
     }
 
     @api
-    getkey() {
+    getKey() {
         return this.customKey;
     }
 
@@ -102,7 +102,7 @@ export default class Lookup extends LightningElement {
         }
         // eslint-disable-next-line @lwc/lwc/no-async-operation
         this.searchThrottlingTimeout = setTimeout(() => {
-            // Send search event if search term is long enougth
+            // Send search event if search term is long enough
             if (this.cleanSearchTerm.length >= MINIMAL_SEARCH_TERM_LENGTH) {
                 // Display spinner until results are returned
                 this.loading = true;
@@ -167,7 +167,7 @@ export default class Lookup extends LightningElement {
     }
 
     handleComboboxClick() {
-        // Hide combobox immediatly
+        // Hide combobox immediately
         if (this.blurTimeout) {
             window.clearTimeout(this.blurTimeout);
         }
