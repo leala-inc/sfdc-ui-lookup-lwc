@@ -40,7 +40,7 @@ export default class Lookup extends LightningElement {
         // Clone results before modifying them to avoid Locker restriction
         const resultsLocal = JSON.parse(JSON.stringify(results));
         // Format results
-        this.searchResults = resultsLocal.map((result) => {
+        this.searchResults = resultsLocal.map(result => {
             // Clone and complete search result if icon is missing
             if (this.searchTerm.length > 0) {
                 const regex = new RegExp(`(${this.searchTerm})`, 'gi');
@@ -110,7 +110,7 @@ export default class Lookup extends LightningElement {
                 const searchEvent = new CustomEvent('search', {
                     detail: {
                         searchTerm: this.cleanSearchTerm,
-                        selectedIds: this.curSelection.map((element) => element.id)
+                        selectedIds: this.curSelection.map(element => element.id)
                     }
                 });
                 this.dispatchEvent(searchEvent);
@@ -148,7 +148,7 @@ export default class Lookup extends LightningElement {
         const recordId = event.currentTarget.dataset.recordid;
 
         // Save selection
-        let selectedItem = this.searchResults.filter((result) => result.id === recordId);
+        let selectedItem = this.searchResults.filter(result => result.id === recordId);
         if (selectedItem.length === 0) {
             return;
         }
@@ -197,7 +197,7 @@ export default class Lookup extends LightningElement {
 
     handleRemoveSelectedItem(event) {
         const recordId = event.currentTarget.name;
-        this.curSelection = this.curSelection.filter((item) => item.id !== recordId);
+        this.curSelection = this.curSelection.filter(item => item.id !== recordId);
         this.isDirty = true;
         // Notify parent components that selection has changed
         this.dispatchEvent(new CustomEvent('selectionchange'));
