@@ -52,13 +52,14 @@ export default class Lookup extends LightningElement {
                     : result.subtitle;
             }
             if (typeof result.icon === 'undefined') {
-                const { id, sObjectType, title, subtitle } = result;
+                const { id, sObjectType, title, subtitle, record } = result;
                 return {
                     id,
                     sObjectType,
                     icon: 'standard:default',
                     title,
-                    subtitle
+                    subtitle,
+                    record
                 };
             }
             return result;
