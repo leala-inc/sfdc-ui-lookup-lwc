@@ -53,7 +53,7 @@ public class LookupSearchResultTests {
 
         // For the sake of code coverage
         Account acc = new Account(Id = '0010R00000yvEyRQAU', Name = 'title', BillingCity = 'city');
-        LookupSearchResult r2 = new LookupSearchResult(acc, 'icon', 'BillingCity');
+        LookupSearchResult r2 = new LookupSearchResult(acc, 'icon', 'city');
 
         System.assertEquals('0010R00000yvEyRQAU', r2.getId());
         System.assertEquals('Account', r2.getSObjectType());

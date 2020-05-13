@@ -10,13 +10,13 @@ public class LookupSearchResult implements Comparable {
     private final String title;
     private final String subtitle;
 
-    public LookupSearchResult(SObject record, String icon, String subtitleField) {
+    public LookupSearchResult(SObject record, String icon, String subtitle) {
         this(
             (Id) record.get('id'),
             String.valueOf(record.getSObjectType()),
             icon,
             (String) record.get('name'),
-            subtitleField == null ? null : (String) record.get(subtitleField)
+            subtitle
         );
         this.record = record;
     }
