@@ -1,4 +1,5 @@
 import { LightningElement, api } from 'lwc';
+import { startPositioning, stopPositioning } from 'c/positionLibrary';
 
 const MINIMAL_SEARCH_TERM_LENGTH = 2; // Min number of chars required to search
 const SEARCH_DELAY = 300; // Wait 300 ms after user stops typing then, peform search
@@ -15,6 +16,7 @@ export default class Lookup extends LightningElement {
     @api errors = [];
     @api scrollAfterNItems;
     @api customKey;
+    @api usePositionFixed;
 
     // Template properties
     searchResultsLocalState = [];
@@ -31,6 +33,7 @@ export default class Lookup extends LightningElement {
     _defaultSearchResults = [];
     _curSelection = [];
     _focusedResultIndex = null;
+    _autoPositioning;
 
     // PUBLIC FUNCTIONS AND GETTERS/SETTERS
     @api
@@ -230,6 +233,8 @@ export default class Lookup extends LightningElement {
         this._searchTerm = '';
         this._searchResults = this._defaultSearchResults;
 
+        this._stopAutoPositioning();
+
         // Notify parent components that selection has changed
         this.dispatchSelectionChange();
     }
@@ -258,6 +263,7 @@ export default class Lookup extends LightningElement {
         }
         this._hasFocus = true;
         this._focusedResultIndex = null;
+        this._startAutoPositioning();
     }
 
     handleBlur() {
@@ -266,6 +272,7 @@ export default class Lookup extends LightningElement {
             return;
         }
         this._hasFocus = false;
+        this._stopAutoPositioning();
     }
 
     handleRemoveSelectedItem(event) {
@@ -281,6 +288,23 @@ export default class Lookup extends LightningElement {
         this._isDirty = true;
         // Notify parent components that selection has changed
         this.dispatchSelectionChange();
+    }
+
+    _startAutoPositioning() {
+        if (this._autoPositioning === undefined && this.usePositionFixed) {
+            this._autoPositioning = startPositioning(this, {
+                type: 'dropdown',
+                input: this.template.querySelector('input'),
+                dropdown: this.template.querySelector('[data-listbox]')
+            });
+        }
+    }
+
+    _stopAutoPositioning() {
+        if (this._autoPositioning && this.usePositionFixed) {
+            stopPositioning(this._autoPositioning);
+            this._autoPositioning = undefined;
+        }
     }
 
     // STYLE EXPRESSIONS
@@ -368,6 +392,10 @@ export default class Lookup extends LightningElement {
             'slds-listbox slds-listbox_vertical slds-dropdown slds-dropdown_fluid ' +
             (this.scrollAfterNItems ? 'slds-dropdown_length-with-icon-' + this.scrollAfterNItems : '')
         );
+    }
+
+    get getListboxContainerClass() {
+        return this.usePositionFixed ? 'fixed-listbox-container' : '';
     }
 
     get isInputReadonly() {

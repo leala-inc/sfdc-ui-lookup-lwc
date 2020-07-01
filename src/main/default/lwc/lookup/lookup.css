@@ -24,3 +24,8 @@
 .clear-selection-icon {
     margin-top: calc(-1 * var(--lwc-spacingXxxSmall));
 }
+
+.fixed-listbox-container {
+    position: fixed;
+    z-index: 7000;
+}
