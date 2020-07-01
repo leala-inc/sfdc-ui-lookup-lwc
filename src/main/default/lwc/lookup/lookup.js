@@ -51,7 +51,7 @@ export default class Lookup extends LightningElement {
         const resultsLocal = JSON.parse(JSON.stringify(results));
         // Format results
         const regex = new RegExp(`(${this._searchTerm})`, 'gi');
-        this._searchResults = resultsLocal.map((result) => {
+        this._searchResults = resultsLocal.map(result => {
             // Format title and subtitle
             if (this._searchTerm.length > 0) {
                 result.titleFormatted = result.title
@@ -66,7 +66,15 @@ export default class Lookup extends LightningElement {
             }
             // Add icon if missing
             if (typeof result.icon === 'undefined') {
-                result.icon = 'standard:default';
+                const { id, sObjectType, title, subtitle, record } = result;
+                return {
+                    id,
+                    sObjectType,
+                    icon: 'standard:default',
+                    title,
+                    subtitle,
+                    record
+                };
             }
             return result;
         });
@@ -142,7 +150,7 @@ export default class Lookup extends LightningElement {
                 const searchEvent = new CustomEvent('search', {
                     detail: {
                         searchTerm: this._cleanSearchTerm,
-                        selectedIds: this._curSelection.map((element) => element.id)
+                        selectedIds: this._curSelection.map(element => element.id)
                     }
                 });
                 this.dispatchEvent(searchEvent);
@@ -207,7 +215,7 @@ export default class Lookup extends LightningElement {
         const recordId = event.currentTarget.dataset.recordid;
 
         // Save selection
-        let selectedItem = this._searchResults.filter((result) => result.id === recordId);
+        let selectedItem = this._searchResults.filter(result => result.id === recordId);
         if (selectedItem.length === 0) {
             return;
         }
@@ -227,7 +235,7 @@ export default class Lookup extends LightningElement {
     }
 
     dispatchSelectionChange() {
-        this.dispatchEvent(new CustomEvent('selectionchange', { detail: this._curSelection.map((sel) => sel.id) }));
+        this.dispatchEvent(new CustomEvent('selectionchange', { detail: this._curSelection.map(sel => sel.id) }));
     }
 
     handleComboboxMouseDown(event) {
@@ -262,7 +270,7 @@ export default class Lookup extends LightningElement {
 
     handleRemoveSelectedItem(event) {
         const recordId = event.currentTarget.name;
-        this._curSelection = this._curSelection.filter((item) => item.id !== recordId);
+        this._curSelection = this._curSelection.filter(item => item.id !== recordId);
         this._isDirty = true;
         // Notify parent components that selection has changed
         this.dispatchSelectionChange();
@@ -278,7 +286,7 @@ export default class Lookup extends LightningElement {
     // STYLE EXPRESSIONS
 
     get getContainerClass() {
-        let css = 'slds-combobox_container slds-has-inline-listbox ';
+        let css = 'slds-combobox_container slds-has-selection ';
         if (this._hasFocus && this.hasResults()) {
             css += 'slds-has-input-focus ';
         }
@@ -298,12 +306,12 @@ export default class Lookup extends LightningElement {
     }
 
     get getInputClass() {
-        let css = 'slds-input slds-combobox__input has-custom-height ';
+        let css = 'slds-input slds-combobox__input ';
         if (this.errors.length > 0 || (this._isDirty && this.required && !this.hasSelection())) {
             css += 'has-custom-error ';
         }
         if (!this.isMultiEntry) {
-            css += 'slds-combobox__input-value ' + (this.hasSelection() ? 'has-custom-border' : '');
+            css += this.hasSelection() ? 'slds-combobox__input-value' : '';
         }
         return css;
     }

@@ -13,7 +13,7 @@
                             <lightning-icon
                                 icon-name={getSelectIconName}
                                 size="small"
-                                alternative-text="Selected item icon"
+                                alternative-text="選択済み"
                                 class={getSelectIconClass}
                             >
                             </lightning-icon>
@@ -42,14 +42,14 @@
                         <lightning-icon
                             icon-name="utility:search"
                             size="x-small"
-                            alternative-text="Search icon"
+                            alternative-text="検索"
                             class={getSearchIconClass}
                         ></lightning-icon>
 
                         <!-- Clear selection button icon for single entry lookups -->
                         <template if:false={isMultiEntry}>
                             <button
-                                title="Remove selected option"
+                                title="選択を削除"
                                 type="button"
                                 onclick={handleClearSelection}
                                 class={getClearSelectionButtonClass}
@@ -57,8 +57,8 @@
                                 <lightning-icon
                                     icon-name="utility:close"
                                     size="x-small"
-                                    alternative-text="Remove selected option"
-                                    class="slds-button__icon"
+                                    alternative-text="選択を削除"
+                                    class="slds-button__icon clear-selection-icon"
                                 ></lightning-icon>
                             </button>
                         </template>
@@ -91,7 +91,7 @@
                                             <lightning-icon
                                                 icon-name={item.result.icon}
                                                 size="small"
-                                                alternative-text="Result item icon"
+                                                alternative-text="検索結果"
                                             ></lightning-icon>
                                         </span>
                                         <span class="slds-media__body">
@@ -118,10 +118,10 @@
                                 <li role="presentation" class="slds-listbox__item">
                                     <span class="slds-media slds-listbox__option_entity" role="option">
                                         <span if:false={loading} class="slds-media__body">
-                                            No results.
+                                            検索結果がありません。
                                         </span>
                                         <span if:true={loading} class="slds-media__body">
-                                            Loading...
+                                            読み込み中...
                                         </span>
                                     </span>
                                 </li>

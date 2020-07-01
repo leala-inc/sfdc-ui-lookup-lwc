@@ -3,11 +3,23 @@
  * The Lookup controller returns a List<LookupSearchResult> when sending search result back to Lightning
  */
 public class LookupSearchResult implements Comparable {
-    private Id id;
-    private String sObjectType;
-    private String icon;
-    private String title;
-    private String subtitle;
+    private final SObject record;
+    private final Id id;
+    private final String sObjectType;
+    private final String icon;
+    private final String title;
+    private final String subtitle;
+
+    public LookupSearchResult(SObject record, String icon, String subtitle) {
+        this(
+            (Id) record.get('id'),
+            String.valueOf(record.getSObjectType()),
+            icon,
+            (String) record.get('name'),
+            subtitle
+        );
+        this.record = record;
+    }
 
     public LookupSearchResult(Id id, String sObjectType, String icon, String title, String subtitle) {
         this.id = id;
@@ -15,6 +27,11 @@ public class LookupSearchResult implements Comparable {
         this.icon = icon;
         this.title = title;
         this.subtitle = subtitle;
+    }
+
+    @AuraEnabled
+    public SObject getRecord() {
+        return record;
     }
 
     @AuraEnabled
