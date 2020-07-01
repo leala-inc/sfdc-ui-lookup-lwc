@@ -22,7 +22,7 @@ const ENTER = 13;
 // Helper function to wait until the microtask queue is empty.
 function flushPromises() {
     // eslint-disable-next-line no-undef
-    return new Promise((resolve) => setImmediate(resolve));
+    return new Promise(resolve => setImmediate(resolve));
 }
 
 describe('c-lookup event handling', () => {
@@ -72,7 +72,7 @@ describe('c-lookup event handling', () => {
         const element = createElement('c-lookup', {
             is: Lookup
         });
-        const searchFn = (event) => {
+        const searchFn = event => {
             event.target.setSearchResults(SAMPLE_SEARCH_ITEMS);
         };
         element.addEventListener('search', searchFn);
@@ -104,7 +104,7 @@ describe('c-lookup event handling', () => {
         const element = createElement('c-lookup', {
             is: Lookup
         });
-        const searchFn = (event) => {
+        const searchFn = event => {
             event.target.setSearchResults(SAMPLE_SEARCH_ITEMS);
         };
         element.addEventListener('search', searchFn);
