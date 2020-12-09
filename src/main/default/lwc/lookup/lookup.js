@@ -1,36 +1,49 @@
 import { LightningElement, api } from 'lwc';
+import { NavigationMixin } from 'lightning/navigation';
 
 const MINIMAL_SEARCH_TERM_LENGTH = 2; // Min number of chars required to search
 const SEARCH_DELAY = 300; // Wait 300 ms after user stops typing then, peform search
+const ARROW_UP = 38;
+const ARROW_DOWN = 40;
+const ENTER = 13;
 
-export default class Lookup extends LightningElement {
+export default class Lookup extends NavigationMixin(LightningElement) {
+    // Public properties
     @api label;
-    @api required;
+    @api required = false;
+    @api disabled = false;
     @api placeholder = '';
     @api isMultiEntry = false;
     @api errors = [];
     @api scrollAfterNItems;
-    @api customKey;
+    @api newRecordOptions = [];
 
-    searchTerm = '';
-    searchResults = [];
-    hasFocus = false;
+    // Template properties
+    searchResultsLocalState = [];
     loading = false;
-    isDirty = false;
 
-    cleanSearchTerm;
-    blurTimeout;
-    searchThrottlingTimeout;
-    curSelection = [];
+    // Private properties
+    _hasFocus = false;
+    _isDirty = false;
+    _searchTerm = '';
+    _cleanSearchTerm;
+    _cancelBlur = false;
+    _searchThrottlingTimeout;
+    _searchResults = [];
+    _defaultSearchResults = [];
+    _curSelection = [];
+    _focusedResultIndex = null;
 
-    // EXPOSED FUNCTIONS
+    // PUBLIC FUNCTIONS AND GETTERS/SETTERS
     @api
     set selection(initialSelection) {
-        this.curSelection = Array.isArray(initialSelection) ? initialSelection : [initialSelection];
-        this.isDirty = false;
+        this._curSelection = Array.isArray(initialSelection) ? initialSelection : [initialSelection];
+        this.processSelectionUpdate(false);
+        this._hasFocus = false;
     }
+
     get selection() {
-        return this.curSelection;
+        return this._curSelection;
     }
 
     @api
@@ -40,81 +53,99 @@ export default class Lookup extends LightningElement {
         // Clone results before modifying them to avoid Locker restriction
         const resultsLocal = JSON.parse(JSON.stringify(results));
         // Format results
-        this.searchResults = resultsLocal.map((result) => {
-            // Clone and complete search result if icon is missing
-            if (this.searchTerm.length > 0) {
-                const regex = new RegExp(`(${this.searchTerm})`, 'gi');
+        const regex = new RegExp(`(${this._searchTerm})`, 'gi');
+        this._searchResults = resultsLocal.map((result) => {
+            // Format title and subtitle
+            if (this._searchTerm.length > 0) {
                 result.titleFormatted = result.title
                     ? result.title.replace(regex, '<strong>$1</strong>')
                     : result.title;
                 result.subtitleFormatted = result.subtitle
                     ? result.subtitle.replace(regex, '<strong>$1</strong>')
                     : result.subtitle;
+            } else {
+                result.titleFormatted = result.title;
+                result.subtitleFormatted = result.subtitle;
             }
+            // Add icon if missing
             if (typeof result.icon === 'undefined') {
-                const { id, sObjectType, title, subtitle } = result;
-                return {
-                    id,
-                    sObjectType,
-                    icon: 'standard:default',
-                    title,
-                    subtitle
-                };
+                result.icon = 'standard:default';
             }
             return result;
+        });
+        // Add local state and dynamic class to search results
+        this._focusedResultIndex = null;
+        const self = this;
+        this.searchResultsLocalState = this._searchResults.map((result, i) => {
+            return {
+                result,
+                state: {},
+                get classes() {
+                    let cls =
+                        'slds-media slds-listbox__option slds-listbox__option_entity slds-listbox__option_has-meta';
+                    if (self._focusedResultIndex === i) {
+                        cls += ' slds-has-focus';
+                    }
+                    return cls;
+                }
+            };
         });
     }
 
     @api
     getSelection() {
-        return this.curSelection;
+        return this._curSelection;
     }
 
     @api
-    getkey() {
-        return this.customKey;
+    setDefaultResults(results) {
+        this._defaultSearchResults = [...results];
+        if (this._searchResults.length === 0) {
+            this.setSearchResults(this._defaultSearchResults);
+        }
     }
 
     // INTERNAL FUNCTIONS
 
     updateSearchTerm(newSearchTerm) {
-        this.searchTerm = newSearchTerm;
+        this._searchTerm = newSearchTerm;
 
         // Compare clean new search term with current one and abort if identical
         const newCleanSearchTerm = newSearchTerm.trim().replace(/\*/g, '').toLowerCase();
-        if (this.cleanSearchTerm === newCleanSearchTerm) {
+        if (this._cleanSearchTerm === newCleanSearchTerm) {
             return;
         }
 
         // Save clean search term
-        this.cleanSearchTerm = newCleanSearchTerm;
+        this._cleanSearchTerm = newCleanSearchTerm;
 
         // Ignore search terms that are too small
         if (newCleanSearchTerm.length < MINIMAL_SEARCH_TERM_LENGTH) {
-            this.searchResults = [];
+            this.setSearchResults(this._defaultSearchResults);
             return;
         }
 
         // Apply search throttling (prevents search if user is still typing)
-        if (this.searchThrottlingTimeout) {
-            clearTimeout(this.searchThrottlingTimeout);
+        if (this._searchThrottlingTimeout) {
+            clearTimeout(this._searchThrottlingTimeout);
         }
         // eslint-disable-next-line @lwc/lwc/no-async-operation
-        this.searchThrottlingTimeout = setTimeout(() => {
+        this._searchThrottlingTimeout = setTimeout(() => {
             // Send search event if search term is long enougth
-            if (this.cleanSearchTerm.length >= MINIMAL_SEARCH_TERM_LENGTH) {
+            if (this._cleanSearchTerm.length >= MINIMAL_SEARCH_TERM_LENGTH) {
                 // Display spinner until results are returned
                 this.loading = true;
 
                 const searchEvent = new CustomEvent('search', {
                     detail: {
-                        searchTerm: this.cleanSearchTerm,
-                        selectedIds: this.curSelection.map((element) => element.id)
+                        searchTerm: this._cleanSearchTerm,
+                        rawSearchTerm: newSearchTerm,
+                        selectedIds: this._curSelection.map((element) => element.id)
                     }
                 });
                 this.dispatchEvent(searchEvent);
             }
-            this.searchThrottlingTimeout = null;
+            this._searchThrottlingTimeout = null;
         }, SEARCH_DELAY);
     }
 
@@ -125,12 +156,25 @@ export default class Lookup extends LightningElement {
         return !this.hasSelection();
     }
 
-    hasResults() {
-        return this.searchResults.length > 0;
+    hasSelection() {
+        return this._curSelection.length > 0;
     }
 
-    hasSelection() {
-        return this.curSelection.length > 0;
+    processSelectionUpdate(isUserInteraction) {
+        // Reset search
+        this._cleanSearchTerm = '';
+        this._searchTerm = '';
+        // Remove selected items from default search results
+        const selectedIds = this._curSelection.map((sel) => sel.id);
+        let defaultResults = [...this._defaultSearchResults];
+        defaultResults = defaultResults.filter((result) => selectedIds.indexOf(result.id) === -1);
+        this.setSearchResults(defaultResults);
+        // Indicate that component was interacted with
+        this._isDirty = isUserInteraction;
+        // If selection was changed by user, notify parent components
+        if (isUserInteraction) {
+            this.dispatchEvent(new CustomEvent('selectionchange', { detail: selectedIds }));
+        }
     }
 
     // EVENT HANDLING
@@ -143,34 +187,60 @@ export default class Lookup extends LightningElement {
         this.updateSearchTerm(event.target.value);
     }
 
+    handleKeyDown(event) {
+        if (this._focusedResultIndex === null) {
+            this._focusedResultIndex = -1;
+        }
+        if (event.keyCode === ARROW_DOWN) {
+            // If we hit 'down', select the next item, or cycle over.
+            this._focusedResultIndex++;
+            if (this._focusedResultIndex >= this._searchResults.length) {
+                this._focusedResultIndex = 0;
+            }
+            event.preventDefault();
+        } else if (event.keyCode === ARROW_UP) {
+            // If we hit 'up', select the previous item, or cycle over.
+            this._focusedResultIndex--;
+            if (this._focusedResultIndex < 0) {
+                this._focusedResultIndex = this._searchResults.length - 1;
+            }
+            event.preventDefault();
+        } else if (event.keyCode === ENTER && this._hasFocus && this._focusedResultIndex >= 0) {
+            // If the user presses enter, and the box is open, and we have used arrows,
+            // treat this just like a click on the listbox item
+            const selectedId = this._searchResults[this._focusedResultIndex].id;
+            this.template.querySelector(`[data-recordid="${selectedId}"]`).click();
+            event.preventDefault();
+        }
+    }
+
     handleResultClick(event) {
         const recordId = event.currentTarget.dataset.recordid;
 
         // Save selection
-        let selectedItem = this.searchResults.filter((result) => result.id === recordId);
-        if (selectedItem.length === 0) {
+        const selectedItem = this._searchResults.find((result) => result.id === recordId);
+        if (!selectedItem) {
             return;
         }
-        selectedItem = selectedItem[0];
-        const newSelection = [...this.curSelection];
+        const newSelection = [...this._curSelection];
         newSelection.push(selectedItem);
-        this.curSelection = newSelection;
-        this.isDirty = true;
+        this._curSelection = newSelection;
 
-        // Reset search
-        this.searchTerm = '';
-        this.searchResults = [];
-
-        // Notify parent components that selection has changed
-        this.dispatchEvent(new CustomEvent('selectionchange'));
+        // Process selection update
+        this.processSelectionUpdate(true);
     }
 
-    handleComboboxClick() {
-        // Hide combobox immediatly
-        if (this.blurTimeout) {
-            window.clearTimeout(this.blurTimeout);
+    handleComboboxMouseDown(event) {
+        const mainButton = 0;
+        if (event.button === mainButton) {
+            this._cancelBlur = true;
         }
-        this.hasFocus = false;
+    }
+
+    handleComboboxMouseUp() {
+        this._cancelBlur = false;
+        // Re-focus to text input for the next blur event
+        this.template.querySelector('input').focus();
     }
 
     handleFocus() {
@@ -178,42 +248,55 @@ export default class Lookup extends LightningElement {
         if (!this.isSelectionAllowed()) {
             return;
         }
-        this.hasFocus = true;
+        this._hasFocus = true;
+        this._focusedResultIndex = null;
     }
 
     handleBlur() {
-        // Prevent action if selection is not allowed
-        if (!this.isSelectionAllowed()) {
+        // Prevent action if selection is either not allowed or cancelled
+        if (!this.isSelectionAllowed() || this._cancelBlur) {
             return;
         }
-        // Delay hiding combobox so that we can capture selected result
-        // eslint-disable-next-line @lwc/lwc/no-async-operation
-        this.blurTimeout = window.setTimeout(() => {
-            this.hasFocus = false;
-            this.blurTimeout = null;
-        }, 300);
+        this._hasFocus = false;
     }
 
     handleRemoveSelectedItem(event) {
+        if (this.disabled) {
+            return;
+        }
         const recordId = event.currentTarget.name;
-        this.curSelection = this.curSelection.filter((item) => item.id !== recordId);
-        this.isDirty = true;
-        // Notify parent components that selection has changed
-        this.dispatchEvent(new CustomEvent('selectionchange'));
+        this._curSelection = this._curSelection.filter((item) => item.id !== recordId);
+        // Process selection update
+        this.processSelectionUpdate(true);
     }
 
     handleClearSelection() {
-        this.curSelection = [];
-        this.isDirty = true;
-        // Notify parent components that selection has changed
-        this.dispatchEvent(new CustomEvent('selectionchange'));
+        this._curSelection = [];
+        this._hasFocus = false;
+        // Process selection update
+        this.processSelectionUpdate(true);
+    }
+
+    handleNewRecordClick(event) {
+        const objectApiName = event.currentTarget.dataset.sobject;
+        this[NavigationMixin.Navigate]({
+            type: 'standard__objectPage',
+            attributes: {
+                objectApiName,
+                actionName: 'new'
+            }
+        });
     }
 
     // STYLE EXPRESSIONS
 
+    get hasResults() {
+        return this._searchResults.length > 0;
+    }
+
     get getContainerClass() {
         let css = 'slds-combobox_container slds-has-inline-listbox ';
-        if (this.hasFocus && this.hasResults()) {
+        if (this._hasFocus && this.hasResults) {
             css += 'slds-has-input-focus ';
         }
         if (this.errors.length > 0) {
@@ -224,7 +307,8 @@ export default class Lookup extends LightningElement {
 
     get getDropdownClass() {
         let css = 'slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click ';
-        if (this.hasFocus && this.cleanSearchTerm && this.cleanSearchTerm.length >= MINIMAL_SEARCH_TERM_LENGTH) {
+        const isSearchTermValid = this._cleanSearchTerm && this._cleanSearchTerm.length >= MINIMAL_SEARCH_TERM_LENGTH;
+        if (this._hasFocus && this.isSelectionAllowed() && (isSearchTermValid || this.hasResults)) {
             css += 'slds-is-open';
         }
         return css;
@@ -232,7 +316,7 @@ export default class Lookup extends LightningElement {
 
     get getInputClass() {
         let css = 'slds-input slds-combobox__input has-custom-height ';
-        if (this.errors.length > 0 || (this.isDirty && this.required && !this.hasSelection())) {
+        if (this.errors.length > 0 || (this._isDirty && this.required && !this.hasSelection())) {
             css += 'has-custom-error ';
         }
         if (!this.isMultiEntry) {
@@ -267,7 +351,7 @@ export default class Lookup extends LightningElement {
     }
 
     get getSelectIconName() {
-        return this.hasSelection() ? this.curSelection[0].icon : 'standard:default';
+        return this.hasSelection() ? this._curSelection[0].icon : 'standard:default';
     }
 
     get getSelectIconClass() {
@@ -276,17 +360,16 @@ export default class Lookup extends LightningElement {
 
     get getInputValue() {
         if (this.isMultiEntry) {
-            return this.searchTerm;
+            return this._searchTerm;
         }
-        return this.hasSelection() ? this.curSelection[0].title : this.searchTerm;
+        return this.hasSelection() ? this._curSelection[0].title : this._searchTerm;
     }
 
     get getInputTitle() {
         if (this.isMultiEntry) {
             return '';
         }
-
-        return this.hasSelection() ? this.curSelection[0].title : '';
+        return this.hasSelection() ? this._curSelection[0].title : '';
     }
 
     get getListboxClass() {
@@ -301,9 +384,5 @@ export default class Lookup extends LightningElement {
             return false;
         }
         return this.hasSelection();
-    }
-
-    get isExpanded() {
-        return this.hasResults();
     }
 }
