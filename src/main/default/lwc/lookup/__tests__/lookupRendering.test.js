@@ -1,4 +1,4 @@
-const { createLookupElement, SAMPLE_SEARCH_ITEMS } = require('./lookupTest.utils');
+const { createLookupElement, flushPromises, SAMPLE_SEARCH_ITEMS, LABEL_NO_RESULTS } = require('./lookupTest.utils');
 
 describe('c-lookup rendering', () => {
     afterEach(() => {
@@ -14,28 +14,28 @@ describe('c-lookup rendering', () => {
         // Query for rendered list items
         const listItemEls = lookupEl.shadowRoot.querySelectorAll('li');
         expect(listItemEls.length).toBe(1);
-        expect(listItemEls[0].textContent).toBe('No results.');
+        expect(listItemEls[0].textContent).toBe(LABEL_NO_RESULTS);
     });
 
-    it('shows default search results by default', () => {
+    it('shows default search results by default', async () => {
         const lookupEl = createLookupElement();
         lookupEl.setDefaultResults(SAMPLE_SEARCH_ITEMS);
+        await flushPromises();
 
         // Query for rendered list items
-        return Promise.resolve().then(() => {
-            const listItemEls = lookupEl.shadowRoot.querySelectorAll('span[role=option]');
-            expect(listItemEls.length).toBe(SAMPLE_SEARCH_ITEMS.length);
-            expect(listItemEls[0].dataset.recordid).toBe(SAMPLE_SEARCH_ITEMS[0].id);
-        });
+        const listItemEls = lookupEl.shadowRoot.querySelectorAll('div[role=option]');
+        expect(listItemEls.length).toBe(SAMPLE_SEARCH_ITEMS.length);
+        expect(listItemEls[0].dataset.recordid).toBe(SAMPLE_SEARCH_ITEMS[0].id);
     });
 
-    it('renders label', () => {
+    it('renders label by default', () => {
         const props = { label: 'Sample Lookup' };
         const lookupEl = createLookupElement(props);
 
         // Verify label
         const labelEl = lookupEl.shadowRoot.querySelector('label');
         expect(labelEl.textContent).toBe(props.label);
+        expect(labelEl.className).toBe('slds-form-element__label');
     });
 
     it('does not render label if omitted', () => {
@@ -44,6 +44,31 @@ describe('c-lookup rendering', () => {
         // Verify label doesn't exist
         const labelEl = lookupEl.shadowRoot.querySelector('label');
         expect(labelEl).toBe(null);
+    });
+
+    it('renders but hides label when variant set to label-hidden', () => {
+        const props = {
+            label: 'Sample Lookup',
+            variant: 'label-hidden'
+        };
+        const lookupEl = createLookupElement(props);
+
+        // Verify label
+        const labelEl = lookupEl.shadowRoot.querySelector('label');
+        expect(labelEl).not.toBeNull();
+        expect(labelEl.classList).toContain('slds-assistive-text');
+    });
+
+    it('renders horizontal label when variant set to label-inline', () => {
+        const props = {
+            label: 'Sample Lookup',
+            variant: 'label-inline'
+        };
+        const lookupEl = createLookupElement(props);
+
+        // Verify form element
+        const formElementEl = lookupEl.shadowRoot.querySelector('div:first-child');
+        expect(formElementEl.classList).toContain('slds-form-element_horizontal');
     });
 
     it('renders single entry (no selection)', () => {
@@ -100,6 +125,30 @@ describe('c-lookup rendering', () => {
         expect(selPills[1].title).toBe(SAMPLE_SEARCH_ITEMS[1].title);
     });
 
+    it('does not shows default search results when they are already selected', async () => {
+        const lookupEl = createLookupElement({
+            isMultiEntry: true,
+            selection: SAMPLE_SEARCH_ITEMS
+        });
+        lookupEl.setDefaultResults(SAMPLE_SEARCH_ITEMS);
+        await flushPromises();
+
+        // Query for rendered list items
+        const listItemEls = lookupEl.shadowRoot.querySelectorAll('li span.slds-media__body');
+        expect(listItemEls.length).toBe(1);
+        expect(listItemEls[0].textContent).toBe(LABEL_NO_RESULTS);
+    });
+
+    it('renders new record creation option when no selection', () => {
+        const lookupEl = createLookupElement({ newRecordOptions: [{ value: 'Account', label: 'New Account' }] });
+
+        // Query for rendered list items
+        const listItemEls = lookupEl.shadowRoot.querySelectorAll('li span.slds-media__body');
+        expect(listItemEls.length).toBe(2);
+        expect(listItemEls[0].textContent).toBe('No results.');
+        expect(listItemEls[1].textContent).toBe('New Account');
+    });
+
     it('can be disabled', () => {
         const lookupEl = createLookupElement({
             disabled: true
@@ -109,6 +158,7 @@ describe('c-lookup rendering', () => {
         const input = lookupEl.shadowRoot.querySelector('input');
         expect(input.disabled).toBe(true);
     });
+
     it('disables clear selection button when single entry and disabled', () => {
         // Create lookup
         const lookupEl = createLookupElement({

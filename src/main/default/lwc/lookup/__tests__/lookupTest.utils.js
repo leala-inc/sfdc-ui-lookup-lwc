@@ -4,9 +4,8 @@ import Lookup from 'c/lookup';
 /**
  * Helper function to wait until the microtask queue is empty
  */
-export const flushPromises = () => {
-    // eslint-disable-next-line no-undef
-    return new Promise((resolve) => setImmediate(resolve));
+export const flushPromises = async () => {
+    return Promise.resolve();
 };
 
 /**
@@ -23,6 +22,20 @@ export const createLookupElement = (props = {}) => {
     return lookupEl;
 };
 
+/**
+ * Simulates search term input
+ * @param {Element} lookupEl
+ * @param {String} searchTerm
+ */
+export const inputSearchTerm = (lookupEl, searchTerm) => {
+    // Sets input search term and force input change
+    const searchInput = lookupEl.shadowRoot.querySelector('input');
+    searchInput.value = searchTerm;
+    searchInput.dispatchEvent(new CustomEvent('input'));
+    // Disable search throttling
+    jest.runAllTimers();
+};
+
 export const SAMPLE_SEARCH_ITEMS = [
     {
         id: 'id1',
@@ -37,3 +50,5 @@ export const SAMPLE_SEARCH_ITEMS = [
         subtitle: 'sub2'
     }
 ];
+
+export const LABEL_NO_RESULTS = 'No results.';

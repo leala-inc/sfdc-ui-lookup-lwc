@@ -1,4 +1,4 @@
-const { createLookupElement, flushPromises, SAMPLE_SEARCH_ITEMS } = require('./lookupTest.utils');
+const { createLookupElement, inputSearchTerm, flushPromises, SAMPLE_SEARCH_ITEMS } = require('./lookupTest.utils');
 
 describe('c-lookup exposed functions', () => {
     afterEach(() => {
@@ -30,17 +30,35 @@ describe('c-lookup exposed functions', () => {
         expect(selection.length).toBe(1);
     });
 
-    it('setSearchResults renders correct results', () => {
+    it('setSearchResults renders correct results', async () => {
         // Create lookup
         const lookupEl = createLookupElement();
         lookupEl.setSearchResults(SAMPLE_SEARCH_ITEMS);
+        await flushPromises();
 
         // Query for rendered list items
-        return flushPromises().then(() => {
-            const listItemEls = lookupEl.shadowRoot.querySelectorAll('li');
-            expect(listItemEls.length).toBe(SAMPLE_SEARCH_ITEMS.length);
-            const resultItemEls = listItemEls[0].querySelectorAll('lightning-formatted-rich-text');
-            expect(resultItemEls.length).toBe(2);
-        });
+        const listItemEls = lookupEl.shadowRoot.querySelectorAll('li');
+        expect(listItemEls.length).toBe(SAMPLE_SEARCH_ITEMS.length);
+        const resultItemEls = listItemEls[0].querySelectorAll('lightning-formatted-rich-text');
+        expect(resultItemEls.length).toBe(2);
+    });
+
+    it('setSearchResults supports special regex characters in search term', async () => {
+        jest.useFakeTimers();
+
+        // Create lookup with search handler
+        const lookupEl = createLookupElement();
+        const searchFn = (event) => {
+            event.target.setSearchResults(SAMPLE_SEARCH_ITEMS);
+        };
+        lookupEl.addEventListener('search', searchFn);
+
+        // Simulate search term input with regex characters
+        inputSearchTerm(lookupEl, '[ab');
+        await flushPromises();
+
+        // Query for rendered list items
+        const listItemEls = lookupEl.shadowRoot.querySelectorAll('li');
+        expect(listItemEls.length).toBe(SAMPLE_SEARCH_ITEMS.length);
     });
 });
